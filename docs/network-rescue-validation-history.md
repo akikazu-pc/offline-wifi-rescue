@@ -77,3 +77,11 @@
 复测包 `NetworkRescue-0.2.1-offline-redistributable-win-x64.esd` 的 SHA-256 为 `10A44E9293A2B583D1451C517D985252333E58F442ACCC241F383FA2B94555C4`。本地证据为 `artifacts/verify-main-014945/OWR-c5a6be0-W10-results/retest.txt` 和 `artifacts/verify-main-014945/OWR-c5a6be0-W11-results/retest.txt`，同目录的 `setupapi.dev.log` 记录 Windows 驱动安装过程。
 
 **待验证**。用公开包支持的实体 Realtek 网卡验证驱动安装、设备正常启动和联网恢复，包括地址、DNS 和 HTTPS。宿主机的 Intel I226-V 与 MediaTek MT7925 均不匹配本包驱动。 [实机验收](network-rescue-field-test.md)
+
+## 2026-11-15 迁移后的 Hyper-V 介质与模拟网卡
+
+- 本地归档位于 `artifacts/hardware-check-shared-desktop-archive/pe-hyperv-validation/`。迁移时逐文件核对了相对路径、大小和 SHA-256。更新路径后，`consumer-lab/tools/Lab.psm1` 可加载并解析到新归档，归档中的 PowerShell 脚本通过语法检查。
+- 挂载 `consumer-media/` 下的 Win10 22H2 和 Win11 26300 安装 ISO，均可读取 `sources/boot.wim` 和安装映像。用归档中的 `matched-setup-pe.iso` 启动隔离的 Hyper-V 第 2 代来宾 `OWR-ArchiveMedia-Check`，成功进入 WinPE 命令提示符。
+- 在该来宾挂载 `lab-bin4.iso`，运行其中的 `MissingNicFixture.exe`。工具注册返回 0，`pnputil /enum-devices /problem 28` 确认 `ROOT\NET\0000` 为 Code 28（`CM_PROB_FAILED_INSTALL`）。测试后已关闭来宾。
+
+本轮覆盖介质挂载、WinPE 启动和模拟设备注册。实体网卡安装、绑定和联网恢复仍待验证。截图保存在本地 `artifacts/archive-media-check.png`。
