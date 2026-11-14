@@ -85,3 +85,16 @@
 - 在该来宾挂载 `lab-bin4.iso`，运行其中的 `MissingNicFixture.exe`。工具注册返回 0，`pnputil /enum-devices /problem 28` 确认 `ROOT\NET\0000` 为 Code 28（`CM_PROB_FAILED_INSTALL`）。测试后已关闭来宾。
 
 本轮覆盖介质挂载、WinPE 启动和模拟设备注册。实体网卡安装、绑定和联网恢复仍待验证。截图保存在本地 `artifacts/archive-media-check.png`。
+
+## 2026-11-15 公开离线 ESD 双系统复测
+
+从 `offline-wifi-rescue` 的 `main` 提交 `0a29e54` 重打公开离线包。ESD 的 SHA-256 为 `0E79D66B9143AB11841E0D93DCF1C45B1645F8FFB77974C04B31E1053A8342EE`。
+
+用新归档的 `matched-setup-pe.iso` 再次启动 WinPE。从同一归档的 `lab-bin4.iso` 取出 `MissingNicFixture.exe`，在两个未接虚拟交换机的 Hyper-V 差分来宾中创建 Realtek 8852CE 模拟设备。测试设备报告 `PCI\VEN_10EC&DEV_C852&SUBSYS_C85210EC` 及 PCI 无线类别兼容 ID。运行前，两台来宾均确认设备为 Code 28，驱动库中没有目标 INF。
+
+| 来宾 | 校验与断网解包 | 签名 INF 匹配 | 驱动入库 |
+| --- | --- | --- | --- |
+| Windows 10 Pro，19045 | SHA-256 一致，DISM `/Apply-Image /CheckIntegrity` 成功 | `netrtwlane602.inf`，版本 `6001.16.172.0` | 通过，急救命令行安装后新增 `oem0.inf` |
+| Windows 11 Enterprise LTSC Evaluation，26100 | SHA-256 一致，DISM `/Apply-Image /CheckIntegrity` 成功 | `netrtwlane602.inf`，版本 `6001.16.172.0` | 通过，急救命令行安装后新增 `oem0.inf` |
+
+两台来宾均用 `pnputil /enum-drivers` 和 `setupapi.dev.log` 核对入库结果。模拟设备安装后均为 Code 31，CLI 返回 2（绑定未确认）。来宾已关机，日志保留在本地 `artifacts/archive-public-retest-0a29e54/`。**实体网卡安装、正常绑定和联网恢复仍待验证。**
