@@ -14,6 +14,7 @@ internal sealed class NetworkRescueView : UserControl
     private readonly string? _portableDriverDirectory;
     private readonly ToolStrip _toolbar = new() { GripStyle = ToolStripGripStyle.Hidden, TabStop = true };
     private readonly ToolStripDropDownButton _tools = new();
+    private readonly ToolStripMenuItem _speedTest = new();
     private readonly ToolStripDropDownButton _help = new();
     private readonly ToolStripMenuItem _guide = new();
     private readonly ToolStripMenuItem _about = new();
@@ -153,13 +154,12 @@ internal sealed class NetworkRescueView : UserControl
         _moduleList.Columns.Add("", 120);
 
         _tools.DropDownItems.AddRange([_refresh, _export, _preview, _searchFolder]);
-        var speedTest = new ToolStripMenuItem(_t["networkTest.title"]);
-        speedTest.Click += (_, _) =>
+        _speedTest.Click += (_, _) =>
         {
             using var dialog = new NetworkSpeedTestForm(_t, Font);
             dialog.ShowDialog(this);
         };
-        _tools.DropDownItems.Add(speedTest);
+        _tools.DropDownItems.Add(_speedTest);
         if (DistributionProfile.Current.Channel != DistributionChannel.Store)
         {
             _tools.DropDownItems.Add(_online);
@@ -206,6 +206,7 @@ internal sealed class NetworkRescueView : UserControl
         _retestConnection.Text = t["rescue.retestConnection"];
         _networkSettings.Text = t["rescue.openNetworkSettings"];
         _tools.Text = t["rescue.pe.tools"];
+        _speedTest.Text = t["networkTest.title"];
         _help.Text = t["ui.menuHelp"];
         _guide.Text = t["ui.guide"];
         _about.Text = t["ui.about"];
