@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>AkikazuHardwareCheck.App</RootNamespace>
+    <AssemblyName>NetworkRescueDesktop</AssemblyName>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <AssemblyTitle>断网急救</AssemblyTitle>
+    <Product>断网急救</Product>
+    <Company>株式会社秋和</Company>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ApplicationVisualStyles>true</ApplicationVisualStyles>
+    <ApplicationUseCompatibleTextRendering>false</ApplicationUseCompatibleTextRendering>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AkikazuHardwareCheck.Core\AkikazuHardwareCheck.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Used for every window's title bar, even when the host process has no icon of its own (tests, dotnet). -->
+    <EmbeddedResource Include="app.ico" LogicalName="app.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="AkikazuHardwareCheck.App.SmokeTests" />
+  </ItemGroup>
+  <!-- Debugger and crash-dump parts of the runtime, the WinForms designer, and a Linux-only helper of a dependency.
+       A running copy of this program loads none of them. Only the published package changes, not debug builds. -->
+  <Target Name="RemoveUnusedRuntimeFiles" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(Filename)', '^(mscordaccore.*|mscordbi|createdump|Microsoft\.DiaSymReader\.Native\..*|System\.Windows\.Forms\.Design(\.Editors)?|libMonoPosixHelper)$'))" />
+    </ItemGroup>
+  </Target>
+</Project>

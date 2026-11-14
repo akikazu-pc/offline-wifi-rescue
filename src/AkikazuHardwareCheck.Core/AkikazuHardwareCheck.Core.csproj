@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>AkikazuHardwareCheck.Core</RootNamespace>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\packaging\shared-desktop\wifi-preview-packages.json" LogicalName="rescue.wifi-preview-packages.json" />
+    <EmbeddedResource Include="..\..\docs\network-rescue-driver-index.csv" LogicalName="rescue.driver-index.csv" />
+    <EmbeddedResource Include="..\..\docs\asus-motherboard-discovery.csv" LogicalName="rescue.asus-board-index.csv" />
+    <EmbeddedResource Include="..\..\docs\network-rescue-model-gaps.csv" LogicalName="rescue.model-gaps.csv" />
+    <EmbeddedResource Include="..\..\docs\network-rescue-search-models.csv" LogicalName="rescue.search-models.csv" />
+    <EmbeddedResource Include="Localization\*.json" LogicalName="i18n.%(Filename).json" />
+    <EmbeddedResource Include="..\..\licenses\*" LogicalName="license.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\THIRD-PARTY-NOTICES.md" LogicalName="license.THIRD-PARTY-NOTICES.md" />
+    <EmbeddedResource Include="..\..\LICENSE" LogicalName="license.LICENSE.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Management" Version="10.0.14" />
+  </ItemGroup>
+</Project>

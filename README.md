@@ -2,7 +2,7 @@
 
 面向 Windows 10 / Windows 11 的开源 Wi-Fi 驱动急救工具。目标是在重装系统后，用 U 盘恢复无线联网。
 
-**状态：项目立项。当前仓库提供产品设计和调研，尚无可执行程序或离线驱动包。**
+**状态：仓库包含可独立构建的 Windows 桌面应用、WinPE 工具和驱动匹配引擎。发布包由本地构建脚本生成。**
 
 | 版本 | 目标设备 | 选包依据 |
 | --- | --- | --- |
@@ -27,3 +27,18 @@
 4. 在 Windows 上提前验证 Store 配置工具的最小联动原型，完成双装、单托盘和上架验证后发布配置工具。
 
 [断网急救与硬件测试的独立安装和联动](docs/shared-desktop-apps.md)
+
+## 本地构建与验证
+
+在 Windows x64 上安装 .NET 10 SDK 和 PowerShell 7。WinPE 编译另需 Visual Studio Build Tools 的 MSVC x64 和 Windows SDK。
+
+```powershell
+dotnet build src/AkikazuHardwareCheck.App -c Release
+dotnet run --project tests/AkikazuHardwareCheck.Core.Tests -c Release
+cmd /c scripts\build-network-rescue-pe.cmd
+pwsh -NoProfile -File scripts/publish-network-rescue-bundles.ps1
+```
+
+发布脚本默认生成在线安装 ZIP 和 SHA-256 文件，输出到 artifacts/network-rescue。传入 -RealtekVendorZip 可额外构建离线预览 ZIP。公开离线 ESD 使用 -PublicOffline、原厂驱动输入和管理员 PowerShell 中的 DISM。附加驱动的输入文件名和校验值见 [公开驱动清单](packaging/shared-desktop/public-offline-drivers.json)。
+
+本次迁移基于 hardware-check 的 cb90eda。公开离线打包与驱动清单另取自 fdd8df6。驱动 ZIP 由操作者提供。
