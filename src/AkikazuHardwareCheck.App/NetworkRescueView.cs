@@ -53,6 +53,7 @@ internal sealed class NetworkRescueView : UserControl
     private readonly ListView _catalogResults = ListViewTable.Create();
     private readonly TextBox _catalogDetails = new() { Dock = DockStyle.Fill, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical };
     private readonly LinkLabel _catalogDriverPage = new() { AutoSize = true };
+    private readonly LinkLabel _catalogModelEvidence = new() { AutoSize = true };
     private readonly LinkLabel _catalogSource = new() { AutoSize = true };
     private NetworkDeviceDiagnostic? _diagnostic;
     private string? _scanStatusKey;
@@ -107,6 +108,7 @@ internal sealed class NetworkRescueView : UserControl
         _catalogTag.SelectedIndexChanged += (_, _) => SearchCatalog();
         _catalogResults.SelectedIndexChanged += (_, _) => ShowCatalogDetails();
         _catalogDriverPage.LinkClicked += (_, _) => OpenCatalogPage(driverPage: true);
+        _catalogModelEvidence.LinkClicked += (_, _) => OpenPage(SelectedCatalogEntry?.ModelEvidence?.AbsoluteUri);
         _catalogSource.LinkClicked += (_, _) => OpenCatalogPage(driverPage: false);
         _adapterLink.LinkClicked += async (_, _) =>
         {
@@ -151,6 +153,13 @@ internal sealed class NetworkRescueView : UserControl
         _moduleList.Columns.Add("", 120);
 
         _tools.DropDownItems.AddRange([_refresh, _export, _preview, _searchFolder]);
+        var speedTest = new ToolStripMenuItem(_t["networkTest.title"]);
+        speedTest.Click += (_, _) =>
+        {
+            using var dialog = new NetworkSpeedTestForm(_t, Font);
+            dialog.ShowDialog(this);
+        };
+        _tools.DropDownItems.Add(speedTest);
         if (DistributionProfile.Current.Channel != DistributionChannel.Store)
         {
             _tools.DropDownItems.Add(_online);
@@ -218,6 +227,7 @@ internal sealed class NetworkRescueView : UserControl
         _catalogCategory.AccessibleName = t["rescue.catalogAllDevices"];
         _catalogTag.AccessibleName = t["rescue.catalogAllTags"];
         _catalogDriverPage.Text = t["rescue.officialDrivers"];
+
         _catalogSource.Text = t["rescue.catalogSource"];
         _catalogResults.Columns[0].Text = t["rescue.catalogBrand"];
         _catalogResults.Columns[1].Text = t["rescue.catalogModel"];
@@ -452,18 +462,29 @@ internal sealed class NetworkRescueView : UserControl
         RescueDeviceTag? tag = category == RescueDeviceCategory.Other && _catalogTag.SelectedIndex > 0
             ? CatalogTags[_catalogTag.SelectedIndex - 1] : null;
         var results = RescueModelCatalog.Search(_catalogQuery.Text, category, tag, out var approximate);
-        _catalogResults.BeginUpdate();
-        _catalogResults.Items.Clear();
-        foreach (var entry in results)
+        var items = new ListViewItem[results.Count];
+        ListViewItem? selectedItem = null;
+        for (var index = 0; index < results.Count; index++)
         {
+            var entry = results[index];
             var qualifier = entry.Type == "laptop-os-record"
                 ? string.Join(" · ", new[] { entry.Platform, entry.Windows }.Where(value => value.Length > 0))
                 : entry.DeviceTag is { } deviceTag ? _t[$"rescue.tag{deviceTag}"] : entry.Platform;
             var item = new ListViewItem(entry.Brand) { Tag = entry };
             item.SubItems.Add(entry.Model);
             item.SubItems.Add(qualifier);
-            _catalogResults.Items.Add(item);
-            item.Selected = entry == selected;
+            items[index] = item;
+            if (entry == selected)
+            {
+                selectedItem = item;
+            }
+        }
+        _catalogResults.BeginUpdate();
+        _catalogResults.Items.Clear();
+        _catalogResults.Items.AddRange(items);
+        if (selectedItem is not null)
+        {
+            selectedItem.Selected = true;
         }
         _catalogResults.EndUpdate();
         _catalogStatus.Text = string.IsNullOrWhiteSpace(_catalogQuery.Text) && category is null ? "" :
@@ -517,11 +538,15 @@ internal sealed class NetworkRescueView : UserControl
     {
         var entry = SelectedCatalogEntry;
         _catalogDriverPage.Visible = entry?.DriverPage is not null;
+        _catalogModelEvidence.Text = _t[entry?.RequiresRevisionSelection == true
+            ? "rescue.catalogRevisionSupport" : "rescue.catalogModelEvidence"];
+        _catalogModelEvidence.Visible = entry?.ModelEvidence is not null && entry.ModelEvidence != entry.Source;
         _catalogSource.Visible = entry?.Source is not null && entry.Source != entry.DriverPage;
         _catalogDetails.Text = entry is null ? "" : string.Join(Environment.NewLine, new[]
         {
             $"{entry.Brand}  {entry.Model}",
             entry.IsSeries ? _t["rescue.catalogSeries"] : "",
+            entry.RequiresRevisionSelection ? _t["rescue.catalogManualRevision"] : "",
             entry.Platform,
             entry.Type is "laptop" or "laptop-os-record" ? entry.Windows : "",
             $"{_t[entry.DeviceTag == RescueDeviceTag.NetworkAdapter ? "rescue.adapter" : "rescue.wifiModel"]}  {(entry.Module.Length == 0 || entry.Module == "pending" ? _t["rescue.catalogPending"] : entry.Module)}",
@@ -1280,6 +1305,7 @@ internal sealed class NetworkRescueView : UserControl
         var links = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true };
         links.Controls.Add(_catalogDriverPage);
         links.Controls.Add(_catalogSource);
+        links.Controls.Add(_catalogModelEvidence);
         var search = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 1, RowCount = 2 };
         var filters = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true };
         filters.Controls.Add(_catalogCategory);

@@ -4,6 +4,68 @@ namespace AkikazuHardwareCheck.Core.Tests;
 
 public sealed class RescueModelCatalogTests
 {
+    [Fact]
+    public void FindsCasperN200UnderBothDocumentedCategories()
+    {
+        foreach (var category in new[] { RescueDeviceTag.BrandedDesktop, RescueDeviceTag.WindowsTablet })
+        {
+            var result = Assert.Single(RescueModelCatalog.Search("Casper Nirvana N200", RescueDeviceCategory.Other, category));
+            Assert.Equal(category, result.DeviceTag);
+            Assert.Equal(category == RescueDeviceTag.BrandedDesktop ? "www.casper.com.tr" : "file.casper.com.tr",
+                result.ModelEvidence?.Host);
+        }
+    }
+
+    [Theory]
+    [InlineData("C1")]
+    [InlineData("D1")]
+    public void DLinkRevisionRequiresManualSelection(string revision)
+    {
+        var result = Assert.Single(RescueModelCatalog.Search($"DWA-182 rev {revision}", RescueDeviceCategory.Other,
+            RescueDeviceTag.NetworkAdapter), row => row.Model == $"DWA-182 rev {revision}");
+        Assert.True(result.RequiresRevisionSelection);
+        Assert.Equal(revision == "C1" ? "legacyfiles.us.dlink.com" : "support.dlink.com", result.ModelEvidence?.Host);
+        Assert.Null(result.DriverPage);
+    }
+
+    [Theory]
+    [InlineData("NEC", "PC-VKT13HZG4", "nec/pc-vkt13hzg4")]
+    [InlineData("Panasonic", "CF-191AYSXBM", "panasonic/cf-191aysxbm")]
+    [InlineData("Fujitsu", "LIFEBOOK AH531", "fujitsu/lifebook-ah531")]
+    public void FindsDriverHubModelCandidatesWithPendingEvidence(string brand, string model, string path)
+    {
+        var entry = Assert.Single(RescueModelCatalog.Search($"{brand} {model}", RescueDeviceCategory.Laptop),
+            item => item.Model == model);
+        Assert.Equal("pending", entry.Windows10Evidence);
+        Assert.Equal("pending", entry.Windows11Evidence);
+        Assert.Equal($"https://jp.drvhub.net/laptops/{path}", entry.Source?.AbsoluteUri);
+        Assert.Null(entry.DriverPage);
+    }
+
+    [Fact]
+    public void ExcludesDriverHubSeriesGenerationsFromModelSearch()
+    {
+        foreach (var generation in new[] { "CF-33-1", "CF-20-2", "CF-31-5", "CF-54-3", "CF-33-2" })
+        {
+            Assert.DoesNotContain(RescueModelCatalog.Search($"Panasonic {generation}", RescueDeviceCategory.Laptop),
+                entry => entry.Model == generation);
+        }
+    }
+
+    [Theory]
+    [InlineData("AM1M-A", RescueDeviceCategory.DiyDesktop, null, "AM1M-A")]
+    [InlineData("ESPRIMO D9500", RescueDeviceCategory.Laptop, null, "ESPRIMO D9500")]
+    [InlineData("ESPRIMO D9510", RescueDeviceCategory.Laptop, null, "ESPRIMO D9510")]
+    public void FindsImportedDriverHubModelsInTheirDeviceClass(string query, RescueDeviceCategory category,
+        RescueDeviceTag? tag, string model)
+    {
+        var entry = Assert.Single(RescueModelCatalog.Search(query, category, tag), item => item.Model == model);
+        Assert.Equal("pending", entry.Windows10Evidence);
+        Assert.Equal("pending", entry.Windows11Evidence);
+        Assert.Equal("jp.drvhub.net", entry.Source?.Host);
+        Assert.Null(entry.DriverPage);
+    }
+
     [Theory]
     [InlineData("NH.U1BAA.001", "oem-wlan-listed", "AX1675i")]
     [InlineData("NX.KYXAA.002", "outside-x64-record", "802.11be")]
@@ -66,7 +128,10 @@ public sealed class RescueModelCatalogTests
     [Fact]
     public void FindsAdditionalDeviceCategoriesWithSeparatePlatformEvidence()
     {
-        Assert.Equal(20, RescueModelCatalog.Search("单板电脑").Count);
+        var boards = RescueModelCatalog.Search("单板电脑");
+        Assert.Equal(21, boards.Count);
+        Assert.Contains(boards, model => model.Brand == "DFI" && model.Model == "AL051" &&
+            model.DeviceTag == RescueDeviceTag.SingleBoardComputer);
         Assert.Contains(RescueModelCatalog.Search("HTPC Beebox N3150"), model => model.DeviceTag == RescueDeviceTag.Htpc);
         var phone = Assert.Single(RescueModelCatalog.Search("Windows 手机 Lumia 950"),
             model => model.Model == "Lumia 950");

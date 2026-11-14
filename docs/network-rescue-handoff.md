@@ -1,0 +1,99 @@
+# 断网急救开发交接
+
+记录日期 2026-11-13（JST）。范围为断网急救及其与 Hardware Check 共享的 Windows 桌面入口。
+
+## 接手基线
+
+- GitHub 仓库为 [akikazu-pc/hardware-check](https://github.com/akikazu-pc/hardware-check)。远端 `main` 为 [`1347ce8`](https://github.com/akikazu-pc/hardware-check/commit/1347ce8101c69193727e133f84e8732458d57690)，其中包含合并 [`ee26ee4`](https://github.com/akikazu-pc/hardware-check/commit/ee26ee4ddf2cb887c9a20c04bb4af472de6b8b42)，`proto/shared-desktop` 已删除。合并后相对该分支最后提交 `2f446fd` 的树差异只有 `AGENTS.md`。
+- `1fb8dcc` 接入 PE 空盘部署，`9c55511` 收录 B850M 普通版无线驱动，`2f446fd` 修复 I226-V 兼容 ID 漏匹配。本地 `main` 的补库提交已与远端 `1347ce8` 合并到 `eebb252`，按包 ID 和行键合并索引，重复的华硕 MediaTek 3.5.0.1349 包统一为 `asus-mb-mtk-3501349`。补库流程见[采集与核验交接](network-rescue-catalog-handoff.md)。之后直接在 `main` 上开发。
+- [`ee26ee4` 的 GitHub Actions](https://github.com/akikazu-pc/hardware-check/actions/runs/43266106438)和 [`1347ce8` 的运行](https://github.com/akikazu-pc/hardware-check/actions/runs/43266826000)均已通过。`main` 已 push 到 `d8e5b05`，对应 CI 通过；GitHub Release [`v0.2.1`](https://github.com/akikazu-pc/hardware-check/releases/tag/v0.2.1) 已发布，网站下载数据已同步。商店尚未提交。
+- 截至 2026-11-13 17:20 JST，远端 `main` 为 `d8e5b05`，本地与其一致；本轮推送后的 CI 在 `main` 和 `v0.2.1` tag 上均通过。更早的记录（`faf66de` 时领先 47 个提交）仅作历史。
+
+## 使用方式和交付包
+
+| 包 | 入口 | 用途 |
+| --- | --- | --- |
+| 公开离线 ESD | 在管理员终端用系统 DISM 还原到空目录，再运行 `NetworkRescue.exe`。 | 随附 Realtek 8852、8851 和 8922 Wi-Fi 驱动。 |
+| 在线安装版 ZIP | 解压后运行 `Install.cmd`。 | 用已有的网络连接下载和校验原厂驱动。索引随程序发布。 |
+
+- Windows 桌面可扫描有线／无线设备、按型号或设备类型搜索、打开官网驱动页、导出驱动 ZIP 和确认安装。存在候选分歧时，按硬件 ID 比对后选择。最终安装仍校验 INF 匹配及签名。两个应用可各自安装，也可在双装时共享窗口和托盘。日语、简体中文、繁体中文和英语可从菜单切换。
+- PE 可发现已有离线 Windows 并写入网络驱动，也可为微软安装器准备选定驱动。无人值守新装从独立 x64 UEFI WinPE 启动，确认版本和空盘后直接应用映像，绕过 Windows Setup 硬件检查。要求 PE 能看到至少 64 GiB 的空盘。C 盘最多 300 GiB，较小的盘扣除启动和恢复分区后使用剩余空间。默认创建空密码本地管理员 `user`。首次出现微软许可页时由用户确认。
+- 操作细节见[产品原型说明](https://github.com/akikazu-pc/hardware-check/blob/cb90eda75f33617fb38cf9bfe181e4adbfbaf02e/docs/shared-desktop-prototype.md#当前交付方式)和 [PE 安装流程](https://github.com/akikazu-pc/hardware-check/blob/cb90eda75f33617fb38cf9bfe181e4adbfbaf02e/docs/shared-desktop-prototype.md#无人值守安装验证)。
+
+历史完整版包含 SDIO、OEM 和分系统的有线驱动，保留作本地救援和验证。公开离线版使用 `-PublicOffline -RealtekVendorZip <8852 原厂 ZIP> -PublicDriverSourceDirectory <附加 ZIP 目录>` 构建。
+
+| 文件 | 字节数 | SHA-256 |
+| --- | ---: | --- |
+| `NetworkRescue-0.2.1-offline-redistributable-win-x64.esd` | 58,024,060 | `170342BA0E1781366F44E4F7F36D91C108BFB19C44DA06630A5ED88E95C0BF42` |
+| `NetworkRescue-0.2.1-online-install-win-x64.zip` | 53,843,724 | `9D6EEE844C19B11CD4721927810EFD3C53A725FD8C896FC029A6A2DEBEB25C38` |
+
+[`v0.2.1` Release](https://github.com/akikazu-pc/hardware-check/releases/tag/v0.2.1) 已用公开离线 ESD 和校验文件替换旧四分卷。公开下载的 ESD 已重新核对 SHA-256，随后删除了含受限驱动的旧分卷、合并脚本、配套说明和旧 ZIP 校验文件。已发布的 ESD 在 Win10 22H2 和 Win11 24H2 离线虚拟机上通过 DISM 还原、39 个文件的 SHA-256 和图形窗口启动检查。
+
+## 已有验证
+
+| 场景 | 实际结果 |
+| --- | --- |
+| 本地构建和测试 | `2f446fd` 原生 PE 构建、540 项核心测试、四语言窗口冒烟、Website 和 Store 负载构建通过。两个 ZIP 的 SHA-256 已复核。 |
+| WinPE 空盘部署 | Hyper-V 第 2 代、无虚拟 TPM、Secure Boot 开启。Windows 11 Enterprise LTSC Evaluation 24H2 x64 在 80 GiB 空盘上经 GUI 部署，C 盘 78.73 GiB，Windows RE 已实际启动。400 GiB 空盘经 CLI 部署，C 盘 300 GiB。两个来宾确认许可后自动进桌面，均可用空密码登录。 |
+| 有分区磁盘保护 | 差分盘包含已有 Windows，GUI 和 CLI 均未将其列为无人值守目标。该 Windows 仍可由离线修复功能发现。 |
+| 驱动与实体联网基线 | 虚拟机用合成 RTL8156 ID 验证签名驱动入库。ROG STRIX B860-G GAMING WIFI 实卡的 MT7925 和 I226-V 均匹配签名 INF，现有 Wi-Fi 访问 HTTPS 成功。I226-V 当时未接网线。宿主驱动未重装或停用。 |
+| 型号与索引 | B850M AYW GAMING WIFI 普通版包已进入两版，核验 75 个精确 PCI 子系统 ID，其中 47 个首次进入在线索引。B850M AYW GAMING WIFI-CSM 已确认板载 Wi-Fi，仍缺实际芯片和精确 INF 对应。 |
+| 华硕笔记本系列拆分 | 82 个 ROG／TUF 系列拆出 333 个精确 SKU、337 条系列×SKU 记录；逐 SKU 核对 Windows 10／11 原厂下载，75 个 Win10 格和 75 个 Win11 格关闭。7 个系列仍有待核格，3 个系列未取到型号列表。 |
+| 消费版断网新装 | 微软官网 Windows 11 26300 与 Windows 10 22H2 日语 ISO，四台无网卡来宾分别部署 Home、Pro，合成 I226-V 或 RTL8168 缺驱动设备。自动选择分系统的签名 INF 并入库，用户确认许可后均离线进入 `user` 桌面。 |
+| PE 修复已有 Windows 10 | DISM 写入 `rt640x64.inf` 10.79.50.1003，驱动库可见。 |
+| 运行中 Windows 安装 | Windows 11 LTSC 24H2 来宾中，合成 I226-V 问题码 28 被识别并匹配 `e2fn.inf`。修复前返回 `NoEligibleDevice`，修复后驱动装到设备并启用 `e2fnexpress`，因无真实硬件报告「绑定未确认」。 |
+| 当前构建 | `62ab531` 的 565 项核心测试和原生 PE 构建通过。 |
+
+详细结果见[验证记录](https://github.com/akikazu-pc/hardware-check/blob/cb90eda75f33617fb38cf9bfe181e4adbfbaf02e/docs/validation-record.md#2026-11-13-hyper-v-消费版断网部署与修复)、[型号覆盖进度](network-rescue-coverage-progress.md)和[原厂下载索引](network-rescue-driver-index.csv)。截至本次记录，`NetworkRescue-PE-Validation` 仍在运行，其余虚拟机已关机；清理 `hardware-check-shared-desktop` 前先确认没有运行中的来宾。
+
+## 下一阶段验收
+
+1. **实机断网恢复。** 虚拟机已覆盖流程、驱动选择、入库和离线首次设置，剩下必须用实体网卡验证的部分：驱动加载后问题码为 0、`adapter.status` 为 `Up`、取得地址和网关、DNS 与 HTTPS 成功。在可隔离的实体机器上分别测试 Wi-Fi 和有线，覆盖 Windows 10 x64 与 Windows 11 Home／Pro x64 的正在运行的 Windows、PE 修复已有系统和全新安装后首次联网。Wi-Fi 绑定后还要手动连接无线网络。先用当前 `main` 重建 ZIP，实体 I226-V 在运行中 Windows 的安装依赖 `38d4e71`。步骤、场景矩阵和只读采集脚本见[实机验收](network-rescue-field-test.md)。
+2. **重点型号补库。** 先完成 AM5、LGA1851 以及较新的 Legion／ROG／TUF／Alienware，再扩到 AM4、LGA1700 和旧设备。按型号、修订和地区 SKU 对照原厂页面、硬件 ID、适用系统及签名 INF。B850M CSM 需要从该型号实卡取得 `VEN/DEV/SUBSYS` 或清晰模块标签。型号发现、候选包、精确 INF、实机安装和联网应分别计数。
+3. **PE 兜底。** 存在多个缺驱动网卡时，修复已有 Windows、无人值守新装和交互式 Setup 都提供「全部安装匹配驱动」：逐个 INF 暂存，修复与无人值守逐个 DISM 写入并统一复查，Setup 24H2 传同一父目录、旧版写多条 `DriverPaths`；CLI 也提供全装，并可在无匹配时确认继续。无匹配时，Setup 和无人值守新装可确认后不添加驱动继续，修复仍提示无匹配并返回。启动时会把 `storage-drivers` 文件夹内的签名 INF 用 `drvload` 加载，供缺存储驱动的机器看到磁盘；中断后的部署可在同一磁盘上重试（先 clean 再重建，要求磁盘身份与标记匹配）。CLI 单驱动修复已在 `NR-W10P-REPAIR` 回归通过，CLI 全装在 `NR-W11LTSC-OS` 用两个合成网卡连续写入两个 INF 并复查通过，无匹配继续已在 `NR-NODRV-01` 验证，中断重试已在 `NR-RESUME-01` 验证；存储驱动加载已用已签名 Net INF 做启动加载代理验证（日志与驱动库均确认），Setup 多驱动的暂存目录与安装器命令已用日志验证，图形界面 Setup 和修复多驱动均已用键盘导航验证（修复后离线系统出现两个 `oem*.inf` 和驱动库目录），但 Setup 实际安装结果和真实缺存储控制器场景尚未执行，标 Unverified。多盘选择与保护已在 `NR-MULTIDISK-02` 验证（两块空白盘同时列出，部署到选中盘，另一块保持 RAW 无分区；60 GiB 以下不入列表），第二个 SCSI 控制器的磁盘可正常枚举；固件启动顺序和其他存储控制器类型仍未验证。保留对目标盘身份和空白状态的确认。
+4. **后续交付。** 在线版已加入驱动版本比较、升级候选和回退候选（Core 的 `DriverVersion`、`OnlineDriverCatalog.FindUpdates`／`FindOlder`），下载列表与确认框会标注「可升级」或「可回退」；回退通过重新安装目录中较旧的签名包完成，自动恢复原驱动仍待做。Microsoft Store 当前只有 Hardware Check 负载，断网急救配置工具及跨版本联动仍待实现。GitHub Release、商店和网站各按对应交付流程处理，push 与发布须分别获得授权。
+5. **已知小问题。** PE 列出 Windows 10 22H2 介质时显示 WIM 头中的构建号 19041，映像实际为 19045。复测确认介质 `setup.exe` 版本同为 19041，无法从介质元数据取得 19045，因此不做显示修正；安装完成后以 DISM 报告的 19045 为准。Windows 11 26300 与 Windows 10 22H2 映像自带 Realtek `rt640x64.inf`，常见 RTL8168 可能无需额外驱动；实机记录时注明是否由系统自带驱动联网。
+
+## 虚拟机实验环境
+
+- 本机只有 Hyper-V。Windows 客户端不支持 DDA 或 USB 直通，虚拟机无法验证真实网卡加载与联网。
+- 实验目录在 `hardware-check-shared-desktop/artifacts/pe-hyperv-validation/`：`consumer-media/` 有官网 ISO 和实验数据 ISO（`lab-bin3.iso` 为最新），`consumer-lab/` 有 `NR-*` 来宾，`consumer-lab/tools/` 有脚本和结果。
+- `tools/Lab.psm1` 负责建来宾、建 LABOUT 日志盘、经 Hyper-V 键盘输入和截图。来宾从 `matched-setup-pe.iso` 启动后，键入 `for %d in (D E F G H I J K) do @if exist %d:\lab.cmd call %d:\lab.cmd`。`lab.cmd` 读取 LABOUT 盘的 `case.cmd` 和 `fixture-ids.txt`，把选项编号经管道交给 `PeNetworkRescue.exe`，日志写回 LABOUT。
+- `tools/fixture/MissingNicFixture.exe` 创建根枚举的缺驱动网卡（问题码 28），仅用于实验来宾。`Inspect-OsDisk.ps1` 只读挂载系统盘核对分区、驱动库和首次设置日志。挂载 VHDX 需要管理员权限，本机经 `Invoke-Elevated.ps1` 执行。
+- 来宾 `user` 为空密码，PowerShell Direct 不接受。`NR-W11LTSC-OS` 是旧 LTSC 盘的副本，实验账户已临时设密码，仅用于运行中安装测试。微软许可页须由用户本人确认。
+- 本机默认只有 Windows PowerShell 5.1。已在 `artifacts/tools/pwsh-7.6.0` 放置便携 PowerShell 7.6.0（.NET 10）；构建前把该目录加入 `PATH`，`build-network-rescue-pe.cmd` 的文本/图标生成和 `assert-distribution.ps1` 的 .NET 10 程序集断言都依赖它。此前用 Python 生成 `PeStrings.generated.h` 的替代做法不再需要。
+
+## 代码和构建入口
+
+- Windows 界面为 [NetworkRescueView.cs](../src/AkikazuHardwareCheck.App/NetworkRescueView.cs)，扫描、目录、签名校验和安装逻辑在 [Core/SharedDesktop](../src/AkikazuHardwareCheck.Core/SharedDesktop/)。
+- 原生 PE 代码在 [AkikazuNetworkRescue.PE](../src/AkikazuNetworkRescue.PE/)，`PeWizard.h`、`PeUnattended.h` 和 `RescueCli.h` 分别覆盖图形流程、直接部署和命令行。四语言文本来自 Core 的 Localization JSON。
+- 可下载驱动定义在 [wifi-preview-packages.json](../packaging/shared-desktop/wifi-preview-packages.json)。型号和原厂链接见 [型号缺口 CSV](network-rescue-model-gaps.csv)及[原厂下载索引](network-rescue-driver-index.csv)。
+- 本地验证入口为 `scripts/test.ps1`、`scripts/build-network-rescue-pe.cmd` 和 `scripts/publish-store-payload.ps1`。重建两版使用 [publish-network-rescue-bundles.ps1](../scripts/publish-network-rescue-bundles.ps1)，传入 `-IncludeCatalog`、`-VendorSourceDirectory`、`-WlanArchive`、`-PeEthernetPackDirectory` 和 `-SevenZipExecutable`。本地缓存分别在 `artifacts/vendor-wifi`、`artifacts/wlan-library/SDIO_Update/drivers/DP_WLAN-WiFi_26082.7z` 和 `artifacts/network-rescue`。产物覆盖后重新核对 ZIP 与 `.sha256`。
+
+## 2026-11-13 原厂列表批量取证
+
+MSI、Acer、华擎的原厂下载接口拒绝脚本直连。本轮先在浏览器里正常打开原厂页面，在同源下低速调用接口，结果压缩成 JSON 快照，并用浏览器端和本地两边的 SHA-256 核对一致后才落盘（`artifacts/network-rescue-*-api*`，不入库）。下面的脚本只读这些快照，不联网，加 `--apply-oem-evidence` 才回填主表。重复运行均为 0 项变化。
+
+| 脚本 | 证据表 | 回填 |
+| --- | --- | --- |
+| `collect-msi-wlan-downloads.py` | `network-rescue-msi-oem-listing-proof.csv`、`network-rescue-msi-laptop-listing-proof.csv` | 主板 751 格，笔记本 38 格。笔记本须产品族规格页逐字列出精确型号 |
+| `collect-acer-wlan-downloads.py` | `network-rescue-acer-oem-listing-proof.csv` | 263 格，另把 129 个 Win11 升级测试格加强为 WLAN 列出。按文件 `oss` 分系统，`Step3` 须等于精确型号，排除 LED 工具 |
+| `collect-asrock-wlan-downloads.py` | `network-rescue-asrock-oem-listing-proof.csv` | 455 格，另补 146 款产品页规格。读 `Download.html`，PG 型号从 pg.asrock.com 单独采集 |
+
+判定口径与华硕一致：“列出”要求已有出厂无线证据；“未列出”要求该系统的驱动列表是有效的（含 LAN 类目，或至少 5 个文件且含音频或芯片组），且全表无 WLAN 文件，并有出厂无线证据或规格未列 WLAN。Killer 通用包、近似型号、组合系统文件、空列表都保持待核。提交 `e22e373` 的说明写成关闭 300 格，实际是 301 格。
+
+最新待核：主板 Win10 1、Win11 1，笔记本 Win10 17、Win11 0，合计 **19**（起点 2,570）。一体机和戴尔系统 ID 组合已清零。戴尔系统 ID 组合 166 格已全部关闭（88 格原厂无 Win10 驱动包，78 格 Win10 包内含 Wi-Fi 驱动）。
+
+剩余与下一步：
+- Acer：仍有 49／20 格待核。族级扫描已按修正后的缓存键重跑；把驱动列表只有 ARM64 文件（或完全没有列表）的 SKU 记为「x64 范围外」后，62 个系列的 x64 结论一致（116 格），本轮新增关闭 15 个系列 30 格。原厂 sitemap 提供 2,039 个精确型号页；96 个系列行里 15 个系列的美国站型号族只有一个型号页，逐页查询后两系统各关闭（Win10 原厂未列、Win11 列出 Wireless LAN）。其余 73 个多型号系列共 611 个 SKU 已逐一查询，24 个系列因全族结论一致而关闭（47 格），其余因族内结论不一致保持待核（[族级证据](network-rescue-acer-series-family-proof.csv)）。37 款接口返回空，后来被限流（Failed to fetch），冷却后重查；101 条系列行还要拆成精确 SKU。本机 `www.acer.com` 卡在 TLS 重协商，`curl`、Python 和 headless Edge 都超时，只有 `global-download.acer.com` 可读，需换网络或浏览器会话再采。
+- 惠普：笔记本待核清零。Win10 63 格按「驱动包目录只有 Win11 条目 + CVA 只列 W11_*」关闭；Win11 21 格按镜像规则关闭（目录里只有 Win10 条目，CVA 只列 WT64_*，或该包发布说明写明 Windows 10 且列出精确型号）。`hpia.hpcloud.hp.com` 的驱动包矩阵和 `ftp.hp.com` 的 SoftPaq 说明可读，但待核型号在矩阵中没有对应系统的包（2025 AI PC 无 Win10 包，2017–2019 机型无 Win11 包），HPIA 范围本身不作为结案证据。
+- MSI、技嘉、映泰、联想：`www.msi.com`、`www.gigabyte.com`、`www.biostar.com.tw`、`support.lenovo.com` 均返回 403 或拒绝 headless 浏览器；`storage-asset.msi.com` 数据表和 `pcsupport.lenovo.com` 可读，但拿不到逐型号下载列表。
+- 华硕主板：余 12／12 格。已用原厂手册补足 14 款「无出厂无线」证据（[手册证据](network-rescue-asus-mb-spec-proof.csv)）；另有 5 款手册明写「Notices for non Wi-Fi model」，但原厂下载页仍列 Wi-Fi 驱动，按来源冲突保留待核；CSM 型号的原厂页面直接列出基础型号手册，本轮据此关闭 4 块 CSM 板（8 格），另用 B760M-A 手册关闭 PRIME B760M-A D4 与 B760M-A-CSM（4 格）；其余没有精确型号手册的只剩 Pro WS 665-ACE 与 TUF 系列手册；ROG MAXIMUS Z890 HERO、B850M AYW、ROG STRIX B860-G、ProArt B850-CREATOR 只有模块候选。
+- 华擎：余 9／12 格。`www.asrock.com` 整站返回 Incapsula 质询页，但 `download.asrock.com` 的手册可读。本轮按精确型号手册的「Wi-Fi 模块」章节与既有下载列表证据关闭 13 格：6 款主板手册写明预装 Wi-Fi 模块且下载列表对两系统都列出版本化的 Killer／Intel WLAN 驱动；X370 Pro4 手册无无线章节且 Win10 列表未列 WLAN。挂起项分两类：手册对应章节写明「仅 /ac 变体」的型号（如 X470 Master SLI），以及只有 M.2 Key-E 插槽、下载列表却列通用 Wi-Fi 驱动的型号。
+- 华硕笔记本：余 6 格。FA507RW 的 Win10 OS 在列表里但驱动类目为 0（Win11 有 32 个文件）→ 原厂未列；G513IR 的 Win10 有 LAN／音频／芯片组但无 WLAN 文件 → 原厂未列 WLAN；TUF A15 (2022) 系列随之关闭。其余 6 格是空 OS 列表或无网络类目。
+- 联想：余 Win10 3、Win11 4 格。PSREF 规格表对 14 款在待核 Legion 全部只列 Windows 11；其中 8 款的 WLAN 驱动包元数据也只列 `Windows 11 (64-bit)`，两处一致后关闭 8 个 Win10 格。余项缺独立的整机驱动列表（`support.lenovo.com` 403，只有 `pcsupport.lenovo.com` 的单个包页面可读）。[PSREF 证据](network-rescue-lenovo-psref-proof.csv)
+- MSI：主板余 12／12 格，笔记本 0 格（19 个系列行已全部按区域 SKU 关闭）。另有 11 个主板格的原厂页面确实列出 `Intel WIFI Driver`，但型号是通用 Wi-Fi 驱动包、规格未列 WLAN，按工厂配置规则挂起（`specGated`）。原厂规格页明确写「WIRELESS LAN & BLUETOOTH Wi-Fi 7，模块预装于 M.2 Key-E」，逐型号驱动面板只给 Windows 11 的 MediaTek／Qualcomm Wi-Fi 驱动、Windows 10 面板有 LAN 和音频而没有 Wi-Fi 项，据此关闭 4 款 Wi-Fi 板的两个系统格。[MSI 规格证据](network-rescue-msi-spec-proof.csv) 其余型号是通用 Wi-Fi 驱动包与规格未列 WLAN 的冲突，保持待核。
+- MSI 逐型号驱动面板：`/api/v1/product/support/os` 给出型号可选系统，`panel?…&os=` 给出该系统驱动表。108 款待核型号全部命中，笔记本的「Wireless LAN Driver」带版本和 `download.msi.com` 链接，关闭 119 格；主板的通用 Wi-Fi 驱动包与规格未列 WLAN 冲突，只有 2 格按两处都未列关闭。[MSI 证据](network-rescue-msi-oem-listing-proof.csv)
+- Acer 逐型号接口：用页面会话的 Cookie 重放 `DynamicContent/GetDriversAndManuals`，34 个精确 SKU 取到结果，9 格列出 Wireless LAN、5 格原厂 OS 列表没有该系统。[Acer 证据](network-rescue-acer-oem-listing-proof.csv)
+- 华硕笔记本：逐 SKU 复核 `GetPDOS` 后，11 个 SKU 自身的 OS 列表不含 Windows 10，另有 2 个系列因全部 SKU 一致而关闭，共补结 13 格；余 10 格是空 OS 列表或只有非网络类目。证据见[逐 SKU OS 证据](network-rescue-asus-sku-os-proof.csv)。
+- 戴尔、EVGA、技嘉、映泰：见上条与[采集交接](network-rescue-catalog-handoff.md)；戴尔的 127 个 Win10 组合是只发 Win11 的新机型没有 Win10 驱动包，缺原厂系统支持声明。

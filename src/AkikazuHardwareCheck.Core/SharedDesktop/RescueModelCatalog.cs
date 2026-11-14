@@ -13,7 +13,8 @@ public enum RescueDeviceTag
 
 public sealed record RescueCatalogModel(string Type, string Brand, string Model, string Platform, string Windows,
     string Module, string Windows10Evidence, string Windows11Evidence, Uri? Source, Uri? DriverPage, bool IsSeries,
-    RescueDeviceCategory Category, RescueDeviceTag? DeviceTag);
+    RescueDeviceCategory Category, RescueDeviceTag? DeviceTag, bool RequiresRevisionSelection = false,
+    Uri? ModelEvidence = null);
 
 public static class RescueModelCatalog
 {
@@ -174,7 +175,7 @@ public static class RescueModelCatalog
     {
         var supplemental = ReadModels("rescue.search-models.csv", useLegacySupportLookup: false)
             .ToLookup(row => CatalogIdentity(row.Model));
-        var matched = new HashSet<(RescueDeviceCategory Category, string Brand, string Model)>();
+        var matched = new HashSet<(RescueDeviceCategory Category, RescueDeviceTag? Tag, string Brand, string Model)>();
         foreach (var curated in ReadModels("rescue.model-gaps.csv", useLegacySupportLookup: true))
         {
             if (curated.Model.Type == "laptop-os-record")
@@ -197,7 +198,7 @@ public static class RescueModelCatalog
         }
     }
 
-    private static (RescueDeviceCategory Category, string Brand, string Model) CatalogIdentity(RescueCatalogModel model)
+    private static (RescueDeviceCategory Category, RescueDeviceTag? Tag, string Brand, string Model) CatalogIdentity(RescueCatalogModel model)
     {
         var brand = model.Brand.Trim();
         var name = model.Model.Trim();
@@ -207,7 +208,7 @@ public static class RescueModelCatalog
             name = name[brand.Length..].TrimStart();
         }
 
-        return (model.Category, brand.ToUpperInvariant(), name.ToUpperInvariant());
+        return (model.Category, model.DeviceTag, brand.ToUpperInvariant(), name.ToUpperInvariant());
     }
 
     private static SearchEntry Index(RescueCatalogModel model, IEnumerable<string> aliases)
@@ -234,6 +235,7 @@ public static class RescueModelCatalog
         var tagColumn = Array.IndexOf(header, "deviceTag");
         var aliasesColumn = Array.IndexOf(header, "aliases");
         var driverPageColumn = Array.IndexOf(header, "driverPage");
+        var evidenceColumn = Array.IndexOf(header, "manufacturerEvidence");
         while (csv.ReadFields() is { Length: >= 11 } row)
         {
             var source = Https(row[8]);
@@ -253,7 +255,8 @@ public static class RescueModelCatalog
                 ? ReadEnum<RescueDeviceTag>(row, tagColumn) ?? (row[0] == "all-in-one" ? RescueDeviceTag.AllInOne : null)
                 : null;
             var model = new RescueCatalogModel(row[0], row[1], row[2], row[3], row[4], row[6],
-                row[9], row[10], source, driverPage, row[5] is "product-series" or "oem-series-catalog", category, tag);
+                row[9], row[10], source, driverPage, row[5] is "product-series" or "oem-series-catalog", category, tag,
+                row[7] == "manual-revision-selection", Https(ReadColumn(row, evidenceColumn)));
             var aliases = ReadColumn(row, aliasesColumn)?.Split('|',
                 StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries) ?? [];
             yield return new CatalogRow(model, aliases);
