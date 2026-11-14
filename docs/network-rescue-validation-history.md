@@ -1,6 +1,6 @@
 # 断网急救历史验证记录
 
-来源为 Hardware Check 远端 main 的 [cb90eda 验证记录](https://github.com/akikazu-pc/hardware-check/blob/cb90eda75f33617fb38cf9bfe181e4adbfbaf02e/docs/validation-record.md)。以下为原项目的测试结果，涉及原项目的应用、发行包和实验环境。
+2026-11-12 至 2026-11-13 的记录来自 Hardware Check 远端 main，涉及原项目的应用、发行包和实验环境。 [cb90eda 验证记录](https://github.com/akikazu-pc/hardware-check/blob/cb90eda75f33617fb38cf9bfe181e4adbfbaf02e/docs/validation-record.md)
 
 ## 2026-11-12 断网急救 WinPE 离线写入
 
@@ -62,3 +62,18 @@
 - 修复的缺陷：运行中 Windows 的安装器只按硬件 ID 查找设备，而 `e2fn.inf` 匹配的 `PCI\VEN_8086&DEV_125C` 是 Windows 报告的兼容 ID，因此 I226-V 无法安装。已改为同时比对兼容 ID，与 `UpdateDriverForPlugAndPlayDevices` 一致，仍要求恰好一台问题码 28 的设备。另修正命令行版本列表重复编号。
 - 合成设备无真实硬件，驱动加载后为问题码 31，所以结果是「绑定未确认」。实体网卡的绑定、地址、DNS 和 HTTPS 仍需按[实机验收](network-rescue-field-test.md)执行。
 - Windows 11 26300 和 Windows 10 22H2 映像自带 Realtek `rt640x64.inf`，常见 RTL8168 系列可能无需额外驱动即可联网。
+
+## 2026-11-15 独立版公开 ESD 的 Code 28 排查与复测
+
+在两台未连接虚拟交换机的 Hyper-V 差分来宾中，原根枚举测试设备报告了 Realtek 8852CE 硬件 ID `PCI\VEN_10EC&DEV_C852&SUBSYS_C85210EC`，但没有报告 PCI 无线类别兼容 ID。原生命令行匹配到了已签名的 `netrtwlane602.inf`，桌面安装器的设备资格检查返回 `NoEligibleDevice`（3），没有调用 Windows 驱动安装。两台来宾因此保持 Code 28。
+
+原生命令行和图形安装入口现在分别显示设备不符合安装条件、驱动包校验失败等结果。安装资格检查保留。重打公开 ESD 后，两台来宾均核对了 SHA-256，并用系统 DISM 在断网环境还原。
+
+| 来宾 | 原测试设备 | 补齐 `PCI\CC_028000` 和 `PCI\CC_0280` 后 | 驱动入库 |
+| --- | --- | --- | --- |
+| Windows 10 Pro，19045 | 匹配该 INF，CLI 返回 3 并提示设备不符合条件 | 安装器返回「绑定未确认」（2），设备为 Code 31，已登记服务 `rtwlane602` | `pnputil /add-driver` 返回 0 |
+| Windows 11 Enterprise LTSC，26100 | 匹配该 INF，CLI 返回 3 并提示设备不符合条件 | 安装器返回「绑定未确认」（2），设备为 Code 31，已登记服务 `rtwlane602` | `pnputil /add-driver` 返回 0 |
+
+复测包 `NetworkRescue-0.2.1-offline-redistributable-win-x64.esd` 的 SHA-256 为 `10A44E9293A2B583D1451C517D985252333E58F442ACCC241F383FA2B94555C4`。本地证据为 `artifacts/verify-main-014945/OWR-c5a6be0-W10-results/retest.txt` 和 `artifacts/verify-main-014945/OWR-c5a6be0-W11-results/retest.txt`，同目录的 `setupapi.dev.log` 记录 Windows 驱动安装过程。
+
+**待验证**。用公开包支持的实体 Realtek 网卡验证驱动安装、设备正常启动和联网恢复，包括地址、DNS 和 HTTPS。宿主机的 Intel I226-V 与 MediaTek MT7925 均不匹配本包驱动。 [实机验收](network-rescue-field-test.md)

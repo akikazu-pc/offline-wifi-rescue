@@ -100,6 +100,19 @@ static DWORD InstallCurrentDriver(const fs::path& bundle, const DriverMatch& dri
     return result;
 }
 
+static const wchar_t* CurrentDriverResultMessage(const PeText& text, DWORD result)
+{
+    // Keep these values aligned with OfflineInstallResult in the desktop installer.
+    switch (result) {
+    case 0: return text.cliBound;
+    case 1: return text.cliRestart;
+    case 2: return text.cliUnconfirmed;
+    case 3: return text.installNoEligibleDevice;
+    case 4: return text.installPackageRejected;
+    default: return text.failed;
+    }
+}
+
 static int RunCli(const fs::path& bundle, bool isPe, int language)
 {
     const auto& text = peText[language];
@@ -234,9 +247,8 @@ static int RunCli(const fs::path& bundle, bool isPe, int language)
         }
     } else {
         const auto result = InstallCurrentDriver(bundle, *chosen[0]);
-        const wchar_t* messages[] = { text.cliBound, text.cliRestart, text.cliUnconfirmed };
-        if (result < ARRAYSIZE(messages)) {
-            std::wcout << messages[result] << L'\n';
+        if (result <= 5) {
+            std::wcout << CurrentDriverResultMessage(text, result) << L'\n';
             return static_cast<int>(result);
         }
     }

@@ -16,6 +16,8 @@ $keys = [ordered]@{
     homeHelp = 'ui.menuHelp'
     homeGuide = 'ui.guide'
     homeAbout = 'ui.about'
+    installNoEligibleDevice = 'rescue.noEligibleDevice'
+    installPackageRejected = 'rescue.packageRejected'
 }
 foreach ($key in $translations[0].Keys | Where-Object { $_.StartsWith($prefix) }) {
     $keys.Add($key.Substring($prefix.Length), $key)

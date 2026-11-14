@@ -23,4 +23,4 @@ dism.exe /Apply-Image "/ImageFile:$archive" /Index:1 "/ApplyDir:$($destination.F
 
 普通 Windows 和 x64 WinPE 都可从还原目录打开 `NetworkRescue.exe`。普通 Windows 提供完整桌面急救窗口，WinPE 使用原生界面。用 `NetworkRescue.exe --gui` 显式打开图形窗口，或运行 `Run-Network-Rescue.cmd --cli` 在当前控制台操作。WinPE 修复现有 Windows 时，按目标系统构建号匹配签名 INF，经确认后通过 DISM 写入，重启进入目标系统后检查设备绑定及联网。
 
-Hardware Check 的本地完整版曾在 Win10 22H2 和 Win11 24H2 断网来宾中还原，12,876 个文件的路径和 SHA-256 均与暂存目录一致，两台都打开了急救窗口。独立版 `c5a6be0` 的公开包已在 Win10 19045 和 Win11 26100 验证断网还原及 Realtek 8852CE 签名 INF 匹配。两台来宾的模拟设备安装后仍为 Code 28，实体网卡绑定和联网恢复待验证。
+Hardware Check 的本地完整版曾在 Win10 22H2 和 Win11 24H2 断网来宾中还原，12,876 个文件的路径和 SHA-256 均与暂存目录一致，两台都打开了急救窗口。独立版公开包已在 Win10 19045 和 Win11 26100 验证断网还原、Realtek 8852CE 签名 INF 匹配和驱动入库。补齐 PCI 类别 ID 后，模拟设备由 Code 28 变为 Code 31，实体网卡安装和联网恢复待验证。 [排查与复测记录](network-rescue-validation-history.md#2026-11-15-独立版公开-esd-的-code-28-排查与复测)

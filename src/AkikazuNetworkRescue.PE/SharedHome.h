@@ -237,8 +237,7 @@ static void RepairCurrentFromHome(const HomeState& state)
     const auto& match = matches[selected];
     if (!Confirm(text, text.cliConfirmCurrent, match.path.wstring())) return;
     const auto result = InstallCurrentDriver(state.bundle, match);
-    const wchar_t* messages[] = { text.cliBound, text.cliRestart, text.cliUnconfirmed };
-    Notice(text, result < ARRAYSIZE(messages) ? messages[result] : text.failed);
+    Notice(text, CurrentDriverResultMessage(text, result));
 }
 
 static HWND CreateHomeList(HWND window, int id, RECT bounds, const wchar_t* first, const wchar_t* second)
