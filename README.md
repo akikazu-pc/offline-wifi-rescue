@@ -42,3 +42,5 @@ pwsh -NoProfile -File scripts/publish-network-rescue-bundles.ps1
 发布脚本默认生成在线安装 ZIP 和 SHA-256 文件，输出到 artifacts/network-rescue。传入 -RealtekVendorZip 可额外构建离线预览 ZIP。公开离线 ESD 使用 -PublicOffline、原厂驱动输入和管理员 PowerShell 中的 DISM。附加驱动的输入文件名和校验值见 [公开驱动清单](packaging/shared-desktop/public-offline-drivers.json)。
 
 本次迁移基于 hardware-check 的 cb90eda。公开离线打包与驱动清单另取自 fdd8df6。驱动 ZIP 由操作者提供。
+
+打包、Win10／Win11 验收和发布后校验见[发行清单](docs/release-checklist.md)。在线安装版、公开离线包和本地完整版的使用入口见[两款桌面应用的安装与联动](docs/shared-desktop-apps.md)。
