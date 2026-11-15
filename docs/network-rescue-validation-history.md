@@ -98,3 +98,20 @@
 | Windows 11 Enterprise LTSC Evaluation，26100 | SHA-256 一致，DISM `/Apply-Image /CheckIntegrity` 成功 | `netrtwlane602.inf`，版本 `6001.16.172.0` | 通过，急救命令行安装后新增 `oem0.inf` |
 
 两台来宾均用 `pnputil /enum-drivers` 和 `setupapi.dev.log` 核对入库结果。模拟设备安装后均为 Code 31，CLI 返回 2（绑定未确认）。来宾已关机，日志保留在本地 `artifacts/archive-public-retest-0a29e54/`。**实体网卡安装、正常绑定和联网恢复仍待验证。**
+
+## 2026-11-15 公开离线 ESD 补充覆盖
+
+沿用上节的 ESD。`0a29e54` 到 `5a28564` 之间的打包脚本、驱动清单和源代码一致。测试使用隔离的 Hyper-V 差分来宾及归档中的模拟网卡工具。
+
+| 用例 | Win10 Pro 19045 | Win11 Enterprise LTSC 26100 |
+| --- | --- | --- |
+| 8851 驱动包，`PCI\VEN_10EC&DEV_B520&SUBSYS_B52010EC` | 匹配并新增 `netrtwlane603.inf` | 列出两个候选，选择 Win11 包后新增 `netrtwlane613.inf` |
+| 8922 驱动包，`PCI\VEN_10EC&DEV_8922&SUBSYS_892210EC` | 无适用匹配，驱动库无变化 | 匹配并新增 `netrtwlane711.inf` |
+| 无匹配硬件 ID、取消确认 | 驱动库无变化 | 驱动库无变化 |
+| 用归档 WinPE 修复关机的系统盘 | 8852CE INF 新增为 `oem3.inf` | 8852CE INF 新增为 `oem1.inf` |
+
+两台系统盘在 WinPE 写入前均无 `netrtwlane602.inf`。从归档的 `matched-setup-pe.iso` 启动后，用公开包的急救命令行完成离线写入，CLI 和随后的 DISM 驱动库检查均返回 0。运行中的 Windows 安装模拟网卡时仍报告绑定未确认。没有兼容的实体设备参与本轮。
+
+两台来宾均确认公开包的图形入口可启动。Win11 另走完图形界面的扫描、选择 INF、确认和结果提示，8852CE 驱动成功入库，界面显示绑定未确认。在 Win11 修改已还原的 8851 INF 后，安装助手返回 `PackageRejected`（4），驱动库无变化。Win10 的完整图形安装链路和 INF 修改用例尚未取得可确认的结果。
+
+本地日志在 `artifacts/coverage-retest-confirmed/`，WinPE 写入前后的驱动库清单在 `artifacts/coverage-retest-5a28564/`。
