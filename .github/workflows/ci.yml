@@ -28,7 +28,8 @@ jobs:
           global-json-file: global.json
 
       - name: Build desktop app
-        run: dotnet build src/AkikazuHardwareCheck.App -c Release -p:RestoreLockedMode=true
+        # The self-contained app's ILLink package follows the installed SDK.
+        run: dotnet build src/AkikazuHardwareCheck.App -c Release
 
       - name: Run core tests
         run: dotnet run --project tests/AkikazuHardwareCheck.Core.Tests -c Release -p:RestoreLockedMode=true
