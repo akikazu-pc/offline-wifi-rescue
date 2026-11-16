@@ -1,0 +1,37 @@
+name: Windows CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build and test (Windows x64)
+    runs-on: windows-2025
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Build desktop app
+        run: dotnet build src/AkikazuHardwareCheck.App -c Release -p:RestoreLockedMode=true
+
+      - name: Run core tests
+        run: dotnet run --project tests/AkikazuHardwareCheck.Core.Tests -c Release -p:RestoreLockedMode=true
+
+      - name: Build WinPE tools
+        run: cmd /c scripts\build-network-rescue-pe.cmd
